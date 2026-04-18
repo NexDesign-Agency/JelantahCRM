@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Form Order Air</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+  .wrap { max-width: 560px; margin: 0 auto; }
+  h2 { font-size: 20px; font-weight: 600; margin-bottom: 4px; color: #111; }
+  .subtitle { font-size: 13px; color: #666; margin-bottom: 20px; }
+  .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .card-title { font-size: 13px; font-weight: 600; color: #185FA5; background: #e6f1fb; display: inline-block; padding: 2px 10px; border-radius: 20px; margin-bottom: 14px; }
+  .field { margin-bottom: 12px; }
+  label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
+  input, select, textarea { width: 100%; padding: 9px 11px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; color: #111; background: #fff; }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: #185FA5; }
+  textarea { resize: vertical; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btn { width: 100%; padding: 11px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; margin-top: 4px; }
+  .btn-blue { background: #185FA5; color: #fff; }
+  .btn-blue:hover { background: #0C447C; }
+  .btn-blue:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-green { background: #1D9E75; color: #fff; }
+  .btn-green:hover { background: #0F6E56; }
+  .btn-green:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-orange { background: #E87B1E; color: #fff; }
+  .btn-orange:hover { background: #C5651A; }
+  .btn-orange:disabled { opacity: 0.5; cursor: not-allowed; }
+  .msg { margin-top: 10px; padding: 10px 12px; border-radius: 8px; font-size: 13px; display: none; }
+  .msg.ok { background: #eaf3de; color: #3B6D11; display: block; }
+  .msg.err { background: #fcebeb; color: #A32D2D; display: block; }
+  .msg.info { background: #e6f1fb; color: #185FA5; display: block; }
+  hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
+  .settings-toggle { font-size: 12px; color: #185FA5; cursor: pointer; text-decoration: underline; margin-bottom: 10px; display: block; }
+  .settings { display: none; }
+  .settings.open { display: block; }
+  .preview-box { background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 12px; font-size: 13px; color: #333; white-space: pre-wrap; line-height: 1.6; margin-bottom: 10px; display: none; }
+  .preview-box.show { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h2>Form Order Air</h2>
+  <p class="subtitle">Paste teks WhatsApp mentah → AI parse otomatis → kirim ke Google Sheet</p>
+
+  <div class="card">
+    <span class="settings-toggle" onclick="toggleSettings()">⚙️ Pengaturan (API Key & Webhook)</span>
+    <div class="settings" id="settingsBox">
+      <div class="field">
+        <label>Gemini API Key</label>
+        <input type="password" id="geminiKey" placeholder="AIzaSy..." oninput="saveSettings()">
+      </div>
+      <div class="field">
+        <label>URL Webhook Google Apps Script</label>
+        <input type="text" id="webhookUrl" placeholder="https://script.google.com/macros/s/.../exec" oninput="saveSettings()">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Step 1 — Paste teks order</div>
+    <div class="field">
+      <textarea id="rawText" rows="5" placeholder="Contoh:&#10;15 jerigen x 140ribu&#10;Greenlake city&#10;https://share.google/...&#10;+62 858-9368-3132"></textarea>
+    </div>
+    <button class="btn btn-blue" id="parseBtn" onclick="parseWithGemini()">Parse dengan AI (Gemini)</button>
+    <div class="msg" id="parseMsg"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Step 2 — Cek & edit hasil parse</div>
+    <div class="row2">
+      <div class="field">
+        <label>No WhatsApp *</label>
+        <input type="text" id="whatsapp" placeholder="08xxxxxxxxxx">
+      </div>
+      <div class="field">
+        <label>Nama / Outlet</label>
+        <input type="text" id="nama" placeholder="Toko Maju">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Jumlah *</label>
+        <input type="text" id="jumlah" placeholder="5 jerigen">
+      </div>
+      <div class="field">
+        <label>Harga *</label>
+        <input type="text" id="harga" placeholder="7000">
+      </div>
+    </div>
+    <div class="field">
+      <label>Alamat *</label>
+      <input type="text" id="alamat" placeholder="Jl. Mawar No. 5, Jakarta">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Waktu Jemput</label>
+        <input type="text" id="waktuJemput" placeholder="Senin pagi">
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="status">
+          <option value="BARU">BARU</option>
+          <option value="PROSES">PROSES</option>
+          <option value="SELESAI">SELESAI</option>
+          <option value="BATAL">BATAL</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Share Lokasi</label>
+      <input type="text" id="shareLokasi" placeholder="https://share.google/...">
+    </div>
+    <div class="field">
+      <label>Keterangan</label>
+      <textarea id="keterangan" rows="2" placeholder="Bayar cash, dll..."></textarea>
+    </div>
+    <hr>
+
+    <!-- Preview & Copy untuk WA Grup -->
+    <div id="previewBox" class="preview-box"></div>
+    <button class="btn btn-orange" id="copyBtn" onclick="copyToWA()" style="margin-bottom: 8px;">📋 Copy Ringkasan untuk WA Grup</button>
+    <div class="msg" id="copyMsg"></div>
+    <hr style="margin-top:12px;">
+
+    <button class="btn btn-green" id="sendBtn" onclick="kirim()">Kirim ke Google Sheet</button>
+    <div class="msg" id="sendMsg"></div>
+  </div>
+</div>
+
+<script>
+  window.onload = function() {
+    const key = localStorage.getItem('geminiKey');
+    const url = localStorage.getItem('webhookUrl');
+    if (key) document.getElementById('geminiKey').value = key;
+    if (url) document.getElementById('webhookUrl').value = url;
+  };
+
+  function saveSettings() {
+    localStorage.setItem('geminiKey', document.getElementById('geminiKey').value);
+    localStorage.setItem('webhookUrl', document.getElementById('webhookUrl').value);
+  }
+
+  function toggleSettings() {
+    document.getElementById('settingsBox').classList.toggle('open');
+  }
+
+  function showMsg(id, text, type) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'msg ' + type;
+  }
+
+  function buildRingkasan() {
+    const wa       = document.getElementById('whatsapp').value.trim();
+    const nama     = document.getElementById('nama').value.trim();
+    const jumlah   = document.getElementById('jumlah').value.trim();
+    const harga    = document.getElementById('harga').value.trim();
+    const alamat   = document.getElementById('alamat').value.trim();
+    const waktu    = document.getElementById('waktuJemput').value.trim();
+    const lokasi   = document.getElementById('shareLokasi').value.trim();
+    const ket      = document.getElementById('keterangan').value.trim();
+    const status   = document.getElementById('status').value;
+
+    const lines = [];
+    lines.push('📦 *ORDER MASUK*');
+    lines.push('─────────────────');
+    if (nama)   lines.push(`🏪 Outlet  : ${nama}`);
+    if (wa)     lines.push(`📱 WA      : ${wa}`);
+    if (jumlah) lines.push(`📊 Jumlah  : ${jumlah}`);
+    if (harga)  lines.push(`💰 Harga   : Rp ${Number(harga).toLocaleString('id-ID') || harga}`);
+    if (alamat) lines.push(`📍 Alamat  : ${alamat}`);
+    if (waktu)  lines.push(`🕐 Jemput  : ${waktu}`);
+    if (lokasi) lines.push(`🗺️ Lokasi  : ${lokasi}`);
+    if (ket)    lines.push(`📝 Ket     : ${ket}`);
+    lines.push(`🔖 Status  : ${status}`);
+    lines.push('─────────────────');
+
+    return lines.join('\n');
+  }
+
+  function fillForm(data) {
+    document.getElementById('whatsapp').value = data.whatsapp || '';
+    document.getElementById('nama').value = data.nama || '';
+    document.getElementById('jumlah').value = data.jumlah || '';
+    document.getElementById('harga').value = data.harga || '';
+    document.getElementById('alamat').value = data.alamat || '';
+    document.getElementById('waktuJemput').value = data.waktuJemput || '';
+    document.getElementById('shareLokasi').value = data.shareLokasi || '';
+    document.getElementById('keterangan').value = data.keterangan || '';
+    if (data.status) document.getElementById('status').value = data.status;
+
+    // Auto update preview setelah parse
+    updatePreview();
+  }
+
+  function updatePreview() {
+    const box = document.getElementById('previewBox');
+    box.textContent = buildRingkasan();
+    box.classList.add('show');
+  }
+
+  // Update preview otomatis saat field diubah
+  ['whatsapp','nama','jumlah','harga','alamat','waktuJemput','shareLokasi','keterangan','status'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updatePreview);
+    if (el && el.tagName === 'SELECT') el.addEventListener('change', updatePreview);
+  });
+
+  async function copyToWA() {
+    const teks = buildRingkasan();
+    try {
+      await navigator.clipboard.writeText(teks);
+      showMsg('copyMsg', '✅ Berhasil di-copy! Tinggal paste ke grup WA.', 'ok');
+    } catch(e) {
+      // Fallback untuk browser yang tidak support clipboard API
+      const ta = document.createElement('textarea');
+      ta.value = teks;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showMsg('copyMsg', '✅ Berhasil di-copy! Tinggal paste ke grup WA.', 'ok');
+      } catch(e2) {
+        showMsg('copyMsg', 'Gagal copy otomatis. Salin manual dari kotak di atas.', 'err');
+      }
+      document.body.removeChild(ta);
+    }
+  }
+
+  async function parseWithGemini() {
+    const key = document.getElementById('geminiKey').value.trim();
+    const raw = document.getElementById('rawText').value.trim();
+    if (!key) return showMsg('parseMsg', 'Masukkan Gemini API Key dulu di Pengaturan', 'err');
+    if (!raw) return showMsg('parseMsg', 'Masukkan teks order dulu', 'err');
+
+    const btn = document.getElementById('parseBtn');
+    btn.disabled = true;
+    btn.textContent = 'Parsing...';
+    showMsg('parseMsg', 'Sedang diproses Gemini...', 'info');
+
+    const prompt = `Kamu adalah parser data order air minum/galon. Ekstrak informasi dari teks berikut dan kembalikan HANYA JSON valid tanpa komentar atau markdown.
+
+Teks order:
+"""
+${raw}
+"""
+
+Kembalikan JSON ini (string semua, "" jika tidak ada):
+{
+  "whatsapp": "nomor wa format 08xx atau +62xx",
+  "nama": "nama toko/outlet/orang jika ada",
+  "jumlah": "jumlah liter atau jerigen lengkap",
+  "harga": "harga angka saja, 140ribu=140000, 7rb=7000",
+  "alamat": "alamat lengkap",
+  "waktuJemput": "waktu jemput jika ada",
+  "shareLokasi": "link https:// jika ada, salin persis dari teks",
+  "keterangan": "info tambahan lainnya",
+  "status": "BARU"
+}`;
+
+    try {
+      const res = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + key,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0 }
+          })
+        }
+      );
+      const data = await res.json();
+      if (data.error) {
+        showMsg('parseMsg', 'Gemini error: ' + data.error.message, 'err');
+      } else {
+        const text = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+        const parsed = JSON.parse(text);
+        fillForm(parsed);
+        showMsg('parseMsg', 'Berhasil di-parse! Cek & edit jika perlu.', 'ok');
+      }
+    } catch(e) {
+      showMsg('parseMsg', 'Error: ' + e.message, 'err');
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Parse dengan AI (Gemini)';
+  }
+
+  async function kirim() {
+    const url = document.getElementById('webhookUrl').value.trim();
+    const whatsapp = document.getElementById('whatsapp').value.trim();
+    const jumlah = document.getElementById('jumlah').value.trim();
+    const harga = document.getElementById('harga').value.trim();
+    const alamat = document.getElementById('alamat').value.trim();
+
+    if (!url) return showMsg('sendMsg', 'URL webhook belum diisi di Pengaturan', 'err');
+    if (!whatsapp || !jumlah || !harga || !alamat)
+      return showMsg('sendMsg', 'Isi field wajib: WA, jumlah, harga, alamat', 'err');
+
+    const btn = document.getElementById('sendBtn');
+    btn.disabled = true;
+    btn.textContent = 'Mengirim...';
+
+    const payload = {
+      whatsapp,
+      nama: document.getElementById('nama').value.trim() || '-',
+      jumlah, harga, alamat,
+      waktuJemput: document.getElementById('waktuJemput').value.trim() || '-',
+      shareLokasi: document.getElementById('shareLokasi').value.trim() || '-',
+      keterangan: document.getElementById('keterangan').value.trim() || '-',
+      status: document.getElementById('status').value
+    };
+
+    try {
+      await fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      showMsg('sendMsg', 'Data terkirim! Cek Google Sheet dalam beberapa detik.', 'ok');
+      ['whatsapp','nama','jumlah','harga','alamat','waktuJemput','shareLokasi','keterangan'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('rawText').value = '';
+      document.getElementById('status').value = 'BARU';
+      document.getElementById('previewBox').classList.remove('show');
+    } catch(e) {
+      showMsg('sendMsg', 'Error: ' + e.message, 'err');
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Kirim ke Google Sheet';
+  }
+</script>
+</body>
+</html>
