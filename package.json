@@ -1,0 +1,11 @@
+{
+  "name": "jelantah-crm",
+  "version": "1.0.0",
+  "description": "Form Order Jelantah CRM with AI Parsing",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

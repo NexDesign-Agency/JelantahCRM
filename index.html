@@ -131,11 +131,24 @@
 </div>
 
 <script>
+  // Variabel placeholder yang akan diisi otomatis oleh Vercel saat deploy
+  const VERCEL_GEMINI_KEY = "PLACEHOLDER_GEMINI_KEY";
+  const VERCEL_WEBHOOK_URL = "PLACEHOLDER_WEBHOOK_URL";
+
   window.onload = function() {
-    const key = localStorage.getItem('geminiKey');
-    const url = localStorage.getItem('webhookUrl');
+    const savedKey = localStorage.getItem('geminiKey');
+    const savedUrl = localStorage.getItem('webhookUrl');
+
+    // Gunakan yang ada di localStorage, kalau kosong gunakan dari Vercel Env
+    const key = savedKey || (VERCEL_GEMINI_KEY !== "PLACEHOLDER_GEMINI_KEY" ? VERCEL_GEMINI_KEY : "");
+    const url = savedUrl || (VERCEL_WEBHOOK_URL !== "PLACEHOLDER_WEBHOOK_URL" ? VERCEL_WEBHOOK_URL : "");
+
     if (key) document.getElementById('geminiKey').value = key;
     if (url) document.getElementById('webhookUrl').value = url;
+    
+    // Simpan ke localStorage agar awet di browser
+    if (!savedKey && key) localStorage.setItem('geminiKey', key);
+    if (!savedUrl && url) localStorage.setItem('webhookUrl', url);
   };
 
   function saveSettings() {
